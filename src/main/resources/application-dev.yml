@@ -1,0 +1,8 @@
+#am_radio CONFIG - dev
+
+server:
+  port: 443
+
+spring:
+  application:
+    name: am_radio

@@ -1,0 +1,14 @@
+#am_radio CONFIG - prod
+
+server:
+  port: 443
+  ssl:
+    enabled: true
+    key-alias: tomcat
+    key-store: "classpath:certificate.p12"
+    key-store-type: PKCS12
+    key-store-password: ${RADIO_DB_PASSWORD}
+
+spring:
+  application:
+    name: am_radio

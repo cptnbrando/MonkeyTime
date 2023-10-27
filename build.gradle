@@ -1,0 +1,111 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.1.5'
+	id 'io.spring.dependency-management' version '1.1.3'
+
+	// node plugin to compile svelte site
+	id "com.github.node-gradle.node" version "3.1.0"
+}
+
+group = 'com.tugma'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = '21'
+}
+
+// Extensions or Variables to use throughout the build.gradle
+ext {
+	frontendAppName = "monkeytime-svelte"
+	frontendDir = "$projectDir/frontend"
+	profile = System.getenv("SPRING_PROFILES_ACTIVE")
+}
+
+node {
+	nodeProjectDir = file(frontendDir)
+	download = true
+	version = '20.6.1'
+	npmVersion = '10.1.0'
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.register('compileFrontend', NpmTask) {
+	dependsOn npmInstall
+	def inputFiles = project.fileTree(dir: "${frontendDir}", exclude: "**/karma-test-results.xml")
+	inputs.files(inputFiles)
+
+	def outputFile = "${frontendDir}/dist" as Object
+	outputs.dir outputFile
+
+	group "build"
+	description = 'Compile client side assets for production'
+	args = ['run', "build"]
+}
+
+tasks.register('compileFrontendDev', NpmTask) {
+	dependsOn npmInstall
+	def inputFiles = project.fileTree(dir: "${frontendDir}", exclude: "**/karma-test-results.xml")
+	inputs.files(inputFiles)
+
+	def outputFile = "${frontendDir}/dist" as Object
+	outputs.dir outputFile
+
+	group "build"
+	description = 'Compile client side assets for dev'
+	args = ['run', "build"]
+}
+
+tasks.register('copyFrontend', Copy) {
+	dependsOn compileFrontend
+	def inputFiles = project.fileTree(dir: "${frontendDir}/dist")
+	inputs.files(inputFiles)
+
+	def outputFile = "${projectDir}/src/main/resources/static/" as Object
+	outputs.dir outputFile
+
+	from "${frontendDir}/dist"
+	into "${projectDir}/src/main/resources/static"
+}
+
+tasks.register('copyFrontendDev', Copy) {
+	dependsOn compileFrontendDev
+	def inputFiles = project.fileTree(dir: "${frontendDir}/dist")
+	inputs.files(inputFiles)
+
+	def outputFile = "${projectDir}/src/main/resources/static/" as Object
+	outputs.dir outputFile
+
+	from "${frontendDir}/dist"
+	into "${projectDir}/src/main/resources/static"
+}
+
+if (System.getenv("SPRING_PROFILES_ACTIVE") == "prod") {
+	tasks.processResources.dependsOn(copyFrontend)
+}
+
+if (System.getenv("SPRING_PROFILES_ACTIVE") == "dev") {
+	tasks.processResources.dependsOn(copyFrontendDev)
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

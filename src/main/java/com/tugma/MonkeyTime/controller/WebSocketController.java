@@ -4,14 +4,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.GetMapping;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 
 @Controller
 public class WebSocketController {
 
     private final SimpMessagingTemplate global;
+
+    private ArrayList<String> allIDs = new ArrayList<>();
 
     @Autowired
     public WebSocketController(SimpMessagingTemplate global) {
@@ -28,6 +30,16 @@ public class WebSocketController {
     @MessageMapping("/send/message")
     public void sendMessage(String message) {
         this.global.convertAndSend("/message", message);
+    }
+
+    @MessageMapping("/send/id")
+    public void addID(String id) {
+        this.allIDs.add(id);
+    }
+
+    @GetMapping("/api/IDs")
+    public ArrayList<String> getIDs() {
+        return this.allIDs;
     }
 
 }

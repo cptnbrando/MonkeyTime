@@ -1,8 +1,8 @@
-#am_radio CONFIG - dev
+#MonkeyTime CONFIG - dev
 
 server:
   port: 443
 
 spring:
   application:
-    name: am_radio
+    name: MonkeyTime

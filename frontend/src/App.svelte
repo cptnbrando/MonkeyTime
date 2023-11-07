@@ -13,35 +13,76 @@
     ({ web5, did: myDid } = await Web5.connect());
 
     console.log("web5 connected");
-    console.log(myDid.substring(8));
+    console.log(myDid);
 
-    peer = new Peer("", {
+    const checkRes = await fetch("/check", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        did: myDid,
+      }),
+    });
+
+    let peerID = "";
+
+    // If there's an ID for this DiD already on the server
+    // We get back that ID and set it for the Peer connection
+    if (checkRes.status === 300) {
+      const body = await checkRes.json();
+      peerID = body.peerID;
+    }
+
+    // If there's no ID for this DiD on the server
+    // We get a new PeerID, so that way its populated for later checks
+    if (peerID === "") {
+      await fetch("/peerjs/monkeys/peerjs/id")
+        .then((res) => res.text())
+        .then((data) => {
+          peerID = data;
+        });
+    }
+
+    peer = new Peer(peerID, {
       host: "/",
       port: 9000,
       path: "/peerjs/monkeys",
+    });
+
+    const setIDs = await fetch("/setIDs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        did: myDid,
+        peerID: peerID,
+      }),
     });
 
     // This opens up a connection to the peerjs server
     // We need to use the did to see if it's already connected in another session/tab/window
     // If so, we can use that same id, or avoid a connection...
     peer.on("open", function (id) {
-      console.log("ID: " + peer.id);
-      const response = fetch("/peerjs/monkeys/peerjs/peers")
-        .then(function (response) {
-          return response.json();
-        })
-        .then(function (data) {
-          // `data` is the parsed version of the JSON returned from the above endpoint.
-          console.log(data); // { "userId": 1, "id": 1, "title": "...", "body": "..." }
-
-          data.forEach((element: any) => {
-            peer.connect(element, {
-              metadata: {
-                did: myDid
-              }
-            });
-          });
-        });
+      console.log("ID: " + id);
+      // After opening the connection, we retrieve the list of IDs of all active Peers on the server
+      // Then we connect to all peerIDs except our own peerID
+      // fetch("/peerjs/monkeys/peerjs/peers")
+      //   .then(response => console.log(response));
+      // .then(data => {
+      //   console.log(data);
+      //   // data.forEach((element: any) => {
+      //   //   console.log("Attempting to connect to: " + element);
+      //   //   if(element !== peerID) {
+      //   //     peer.connect(element, {
+      //   //       metadata: {
+      //   //         did: myDid
+      //   //       }
+      //   //     });
+      //   //   }
+      //   // });
+      // });
     });
 
     peer.on("connection", function (c) {
@@ -61,6 +102,22 @@
     peer.on("error", function (err) {
       console.log(err);
       alert("" + err);
+    });
+
+    // Once the event handlers have been set, we connect to all peers found on the server
+    fetch("/peerjs/monkeys/peerjs/peers")
+    .then((response) => response.json())
+    .then((data) => {
+      data.forEach((element: any) => {
+        if (element !== peerID) {
+          console.log("Attempting to connect to: " + element);
+          peer.connect(element, {
+            metadata: {
+              did: myDid,
+            },
+          });
+        }
+      });
     });
   });
 </script>

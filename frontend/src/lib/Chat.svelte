@@ -64,10 +64,10 @@
 
 <article>
     <h2>Chat Test</h2>
-    <div class="inline-flex">
+    <!-- <div class="inline-flex">
         <input type="text" bind:value={clientConn} />
         <button on:click={connectToClient}>Connect to ID</button>
-    </div>
+    </div> -->
     <div>
         <span id="did">{myDid}</span>
     </div>
